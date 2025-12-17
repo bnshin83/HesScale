@@ -1,16 +1,14 @@
-from backpack.core.derivatives import (
-    CrossEntropyLossDerivatives,
-    ELUDerivatives,
-    LeakyReLUDerivatives,
-    LinearDerivatives,
-    LogSigmoidDerivatives,
-    MSELossDerivatives,
-    ReLUDerivatives,
-    SELUDerivatives,
-    SigmoidDerivatives,
-    TanhDerivatives,
-    DropoutDerivatives,
-)
+from backpack.core.derivatives.crossentropyloss import CrossEntropyLossDerivatives
+from backpack.core.derivatives.mseloss import MSELossDerivatives
+from backpack.core.derivatives.elu import ELUDerivatives
+from backpack.core.derivatives.leakyrelu import LeakyReLUDerivatives
+from backpack.core.derivatives.linear import LinearDerivatives
+from backpack.core.derivatives.logsigmoid import LogSigmoidDerivatives
+from backpack.core.derivatives.relu import ReLUDerivatives
+from backpack.core.derivatives.selu import SELUDerivatives
+from backpack.core.derivatives.sigmoid import SigmoidDerivatives
+from backpack.core.derivatives.tanh import TanhDerivatives
+from backpack.core.derivatives.dropout import DropoutDerivatives
 from backpack.core.derivatives.elementwise import ElementwiseDerivatives
 from torch import einsum, ones, zeros, zeros_like, cos, ones_like, sin, flip
 from torch.nn.functional import softmax
@@ -23,7 +21,31 @@ from backpack.core.derivatives.avgpoolnd import AvgPoolNDDerivatives
 from backpack.core.derivatives.maxpoolnd import MaxPoolNDDerivatives
 import torch
 from einops import rearrange
-from torch.nn.grad import _grad_input_padding
+
+# Compatibility shim for _grad_input_padding (removed in PyTorch 2.x)
+try:
+    from torch.nn.grad import _grad_input_padding
+except ImportError:
+    # Fallback implementation for PyTorch 2.x
+    def _grad_input_padding(grad_output, input_size, stride, padding, kernel_size, dilation=None):
+        if dilation is None:
+            dilation = [1] * len(stride)
+        input_size = list(input_size)
+        k = grad_output.dim() - 2
+
+        grad_input_padding = []
+        for d in range(k):
+            dim_size = input_size[d + 2]
+            out_size = grad_output.size(d + 2)
+            pad = padding[d] if isinstance(padding, (list, tuple)) else padding
+            dil = dilation[d] if isinstance(dilation, (list, tuple)) else dilation
+            s = stride[d] if isinstance(stride, (list, tuple)) else stride
+            ks = kernel_size[d] if isinstance(kernel_size, (list, tuple)) else kernel_size
+
+            expected_input_size = (out_size - 1) * s - 2 * pad + dil * (ks - 1) + 1
+            grad_input_padding.append(dim_size - expected_input_size)
+
+        return tuple(grad_input_padding)
 
 LOSS = "loss"
 ACTIVATION = "activation"

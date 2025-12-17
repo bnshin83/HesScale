@@ -94,6 +94,10 @@ class HesScale(BackpropExtension):
             },
         )
 
+    def expects_backpropagation_quantities(self):
+        """Required by backpack 1.7+"""
+        return True
+
 
 class HesScaleGN(BackpropExtension):
     def __init__(self, savefield="hesscale_gn"):
@@ -130,3 +134,7 @@ class HesScaleGN(BackpropExtension):
                 Softmax: activations_gn.SoftmaxHesScale(),
             },
         )
+
+    def expects_backpropagation_quantities(self):
+        """Required by backpack 1.7+"""
+        return True
